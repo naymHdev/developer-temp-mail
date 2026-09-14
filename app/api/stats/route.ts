@@ -7,8 +7,12 @@ export async function GET() {
   let upstreamStatus = "operational";
   let latency = 120;
 
+  const apiUrl = (
+    process.env.NEXT_PUBLIC_MAILTM_API_URL || "https://dtmail-proxy.naymhossen09.workers.dev"
+  ).replace(/\/+$/, "");
+
   try {
-    const checkRes = await fetch("https://api.mail.tm/domains", {
+    const checkRes = await fetch(`${apiUrl}/domains`, {
       headers: { Accept: "application/json" },
       cache: "no-store",
     });

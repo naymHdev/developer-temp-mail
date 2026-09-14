@@ -7,7 +7,7 @@ import {
 } from "@/types/mailtm";
 
 const API_BASE = (
-  process.env.NEXT_PUBLIC_MAILTM_API_URL || "https://api.mail.tm"
+  process.env.NEXT_PUBLIC_MAILTM_API_URL || "https://dtmail-proxy.naymhossen09.workers.dev"
 ).replace(/\/+$/, "");
 
 export class MailTmError extends Error {
