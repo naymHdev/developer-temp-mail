@@ -94,7 +94,7 @@ export function MailboxSwitcher({
       </div>
 
       {/* Horizontal Scrollable Mailbox Pills */}
-      <div className="flex items-center gap-2 overflow-x-auto pt-3 pb-1 scrollbar-thin">
+      <div className="flex items-center gap-2 overflow-x-auto pt-3 pb-2 sleek-scroll">
         {mailboxes.map((mb) => {
           const isActive = mb.address === activeAddress;
           const [prefix, domain] = mb.address.split("@");

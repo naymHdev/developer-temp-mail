@@ -98,23 +98,66 @@
   box-shadow: 0 16px 36px -6px rgba(0, 0, 0, 0.6), 0 0 30px -4px rgba(56, 189, 248, 0.08);
 }
 
-/* Custom Scrollbars */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+/* Universal Sleek Dark Custom Scrollbars */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #23263b transparent;
 }
 
-::-webkit-scrollbar-track {
+*::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+*::-webkit-scrollbar-track {
   background: transparent;
 }
 
-::-webkit-scrollbar-thumb {
-  background: #25283b;
+*::-webkit-scrollbar-thumb {
+  background: #23263b;
   border-radius: 9999px;
 }
 
-::-webkit-scrollbar-thumb:hover {
-  background: #363b56;
+*::-webkit-scrollbar-thumb:hover {
+  background: #363b58;
+}
+
+*::-webkit-scrollbar-button {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
+/* Horizontal Workspaces Sleek Scrollbar */
+.sleek-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(245, 158, 11, 0.28) rgba(14, 16, 24, 0.6);
+}
+
+.sleek-scroll::-webkit-scrollbar {
+  height: 4px;
+}
+
+.sleek-scroll::-webkit-scrollbar-track {
+  background: rgba(14, 16, 24, 0.6);
+  border-radius: 9999px;
+  margin: 0 4px;
+}
+
+.sleek-scroll::-webkit-scrollbar-thumb {
+  background: rgba(245, 158, 11, 0.28);
+  border-radius: 9999px;
+  transition: background 0.2s ease;
+}
+
+.sleek-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(245, 158, 11, 0.6);
+}
+
+.sleek-scroll::-webkit-scrollbar-button {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
 }
 
 /* Pulse radar ring for empty inbox state */
