@@ -1,0 +1,49 @@
+// Prisma schema file for DevTempMail (DTM)
+// Configured for PostgreSQL (Neon/Supabase serverless connection pooling)
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model MailboxAccount {
+  id              String    @id @default(cuid())
+  sessionId       String    @unique
+  address         String    @unique
+  password        String
+  mailTmAccountId String
+  mailTmToken     String
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  lastActiveAt    DateTime  @default(now())
+  expiresAt       DateTime?
+
+  // Cached messages for quick retrieval / offline preview
+  messages        CachedMessage[]
+
+  @@index([sessionId])
+  @@index([address])
+}
+
+model CachedMessage {
+  id             String         @id @default(cuid())
+  mailTmId       String         @unique
+  mailboxId      String
+  mailbox        MailboxAccount @relation(fields: [mailboxId], references: [id], onDelete: Cascade)
+  fromAddress    String
+  fromName       String?
+  subject        String
+  intro          String?
+  seen           Boolean        @default(false)
+  hasAttachments Boolean        @default(false)
+  size           Int            @default(0)
+  createdAt      DateTime
+  receivedAt     DateTime       @default(now())
+
+  @@index([mailboxId])
+  @@index([mailTmId])
+}
