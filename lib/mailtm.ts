@@ -6,8 +6,11 @@ import {
   MailTmTokenResponse,
 } from "@/types/mailtm";
 
+const configuredUrl = process.env.NEXT_PUBLIC_MAILTM_API_URL || "";
 const API_BASE = (
-  process.env.NEXT_PUBLIC_MAILTM_API_URL || "https://dtmail-proxy.naymhossen09.workers.dev"
+  configuredUrl && !configuredUrl.includes("api.mail.tm")
+    ? configuredUrl
+    : "https://dtmail-proxy.naymhossen09.workers.dev"
 ).replace(/\/+$/, "");
 
 export class MailTmError extends Error {
