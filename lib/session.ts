@@ -5,6 +5,13 @@ import { MailboxSession } from "@/types/mailtm";
 const SESSION_COOKIE_NAME = "dtm_session";
 const COOKIE_MAX_AGE = 60 * 60 * 24 * 7; // 7 days
 
+// Only attempt PostgreSQL connection if a valid remote pooled URL is configured (not dummy localhost on serverless)
+const isDatabaseAvailable = Boolean(
+  process.env.DATABASE_URL &&
+  !process.env.DATABASE_URL.includes("localhost") &&
+  !process.env.DATABASE_URL.includes("127.0.0.1")
+);
+
 export async function getSessionMailbox(): Promise<MailboxSession | null> {
   const cookieStore = await cookies();
   const sessionCookie = cookieStore.get(SESSION_COOKIE_NAME);
@@ -21,16 +28,15 @@ export async function getSessionMailbox(): Promise<MailboxSession | null> {
       return null;
     }
 
-    // Try to update lastActiveAt in DB if available
-    try {
-      if (process.env.DATABASE_URL) {
+    if (isDatabaseAvailable) {
+      try {
         await prisma.mailboxAccount.updateMany({
           where: { sessionId: sessionData.sessionId },
           data: { lastActiveAt: new Date() },
         });
+      } catch {
+        // Non-blocking database sync
       }
-    } catch {
-      // Non-blocking database sync
     }
 
     return sessionData;
@@ -51,9 +57,8 @@ export async function saveSessionMailbox(session: MailboxSession): Promise<void>
     maxAge: COOKIE_MAX_AGE,
   });
 
-  // Persist to PostgreSQL via Prisma
-  try {
-    if (process.env.DATABASE_URL) {
+  if (isDatabaseAvailable) {
+    try {
       await prisma.mailboxAccount.upsert({
         where: { sessionId: session.sessionId },
         update: {
@@ -70,9 +75,9 @@ export async function saveSessionMailbox(session: MailboxSession): Promise<void>
           mailTmToken: session.token,
         },
       });
+    } catch {
+      // Non-blocking database persistence fallback
     }
-  } catch {
-    // Non-blocking database persistence fallback
   }
 }
 
@@ -85,7 +90,7 @@ export async function clearSessionMailbox(): Promise<void> {
       const rawData = Buffer.from(sessionCookie.value, "base64").toString("utf-8");
       const sessionData: MailboxSession = JSON.parse(rawData);
 
-      if (sessionData.sessionId && process.env.DATABASE_URL) {
+      if (sessionData.sessionId && isDatabaseAvailable) {
         await prisma.mailboxAccount.deleteMany({
           where: { sessionId: sessionData.sessionId },
         });
