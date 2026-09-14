@@ -13,6 +13,14 @@ import { ApiModal } from "@/components/ApiModal";
 import { WebhookRelayModal } from "@/components/WebhookRelayModal";
 import { ShortcutsModal } from "@/components/ShortcutsModal";
 import { MailTmMiniMessage, MailTmFullMessage, StoredMailbox } from "@/types/mailtm";
+import {
+  generateNewMailbox,
+  getMessages,
+  getMessage,
+  deleteMessage,
+  deleteAccount,
+  MailTmError,
+} from "@/lib/mailtm";
 import { WebhookConfig, WebhookDeliveryLog, WebhookPayload } from "@/types/webhook";
 import { extractOtpAndLinks } from "@/lib/extractor";
 import { playNotificationSound } from "@/lib/audio";
@@ -25,6 +33,68 @@ const STORAGE_KEY_ACTIVE = "dtmail_active_address";
 const STORAGE_KEY_WEBHOOK_CONFIG = "dtmail_webhook_config";
 const STORAGE_KEY_WEBHOOK_LOGS = "dtmail_webhook_logs";
 const STORAGE_KEY_DESKTOP_NOTIF = "dtmail_desktop_notifications";
+
+/**
+ * Intelligent mailbox provisioning:
+ * 1. Executes directly in the user's browser (100% immune to Vercel/AWS datacenter IP blocks, zero latency).
+ * 2. Background syncs session cookie with /api/mailbox/save.
+ * 3. Falls back gracefully to /api/mailbox/create if needed.
+ */
+async function provisionMailbox(customPrefix?: string): Promise<StoredMailbox> {
+  // 1. Direct browser-to-Mail.tm creation
+  try {
+    const data = await generateNewMailbox(customPrefix);
+    const sessionId = `dtm_${Math.random().toString(36).substring(2, 10)}_${Date.now()}`;
+    const newMb: StoredMailbox = {
+      sessionId,
+      address: data.address,
+      token: data.token,
+      accountId: data.accountId,
+      createdAt: new Date().toISOString(),
+      unreadCount: 0,
+    };
+
+    // Sync session cookie in background (fire-and-forget)
+    fetch("/api/mailbox/save", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(newMb),
+    }).catch(() => {});
+
+    return newMb;
+  } catch (clientErr: unknown) {
+    if (clientErr instanceof MailTmError && clientErr.status === 429) {
+      throw clientErr;
+    }
+
+    // 2. Server route fallback
+    try {
+      const res = await fetch("/api/mailbox/create", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(customPrefix ? { prefix: customPrefix } : {}),
+      });
+      const createData = await res.json();
+      if (res.status === 429 || createData?.isRateLimited) {
+        throw new MailTmError("Rate limit reached", 429, createData?.retryAfter || 30);
+      }
+      if (createData?.mailbox?.address && createData?.mailbox?.token) {
+        return {
+          sessionId: createData.mailbox.sessionId,
+          address: createData.mailbox.address,
+          token: createData.mailbox.token,
+          accountId: createData.mailbox.accountId,
+          createdAt: createData.mailbox.createdAt,
+          unreadCount: 0,
+        };
+      }
+    } catch {
+      // Fallback to rethrowing client error
+    }
+
+    throw clientErr instanceof Error ? clientErr : new Error("Failed to provision mailbox");
+  }
+}
 
 export default function HomePage() {
   const [mailboxes, setMailboxes] = useState<StoredMailbox[]>([]);
@@ -281,46 +351,18 @@ export default function HomePage() {
         return;
       }
 
-      // No saved mailboxes -> Check server or create new one
-      const res = await fetch("/api/mailbox/current");
-      const data = await res.json();
-
-      if (data?.mailbox?.address && data?.mailbox?.token) {
-        const initialMb: StoredMailbox = {
-          sessionId: data.mailbox.sessionId || `dtm_${Date.now()}`,
-          address: data.mailbox.address,
-          token: data.mailbox.token,
-          accountId: data.mailbox.accountId,
-          createdAt: data.mailbox.createdAt || new Date().toISOString(),
-          unreadCount: 0,
-        };
+      // No saved mailboxes -> Provision a new one
+      try {
+        const initialMb = await provisionMailbox();
         setMailboxes([initialMb]);
         setActiveAddress(initialMb.address);
         persistMailboxes([initialMb], initialMb.address);
-      } else {
-        const createRes = await fetch("/api/mailbox/create", { method: "POST" });
-        const createData = await createRes.json();
-
-        if (createRes.status === 429 || createData?.isRateLimited) {
-          const waitTime = createData?.retryAfter || 30;
+      } catch (err) {
+        if (err instanceof MailTmError && err.status === 429) {
+          const waitTime = err.retryAfter || 30;
           setRateLimitTotal(waitTime);
           setRateLimitRemaining(waitTime);
           toast.error(`Rate limit reached. Please wait ${waitTime}s.`);
-          return;
-        }
-
-        if (createData?.mailbox?.address && createData?.mailbox?.token) {
-          const initialMb: StoredMailbox = {
-            sessionId: createData.mailbox.sessionId,
-            address: createData.mailbox.address,
-            token: createData.mailbox.token,
-            accountId: createData.mailbox.accountId,
-            createdAt: createData.mailbox.createdAt,
-            unreadCount: 0,
-          };
-          setMailboxes([initialMb]);
-          setActiveAddress(initialMb.address);
-          persistMailboxes([initialMb], initialMb.address);
         } else {
           toast.error("Could not initialize temporary mailbox.");
         }
@@ -339,27 +381,47 @@ export default function HomePage() {
       if (isManual && mailbox.address === activeAddress) setIsRefreshing(true);
 
       try {
-        const res = await fetch("/api/mailbox/messages", {
-          headers: {
-            Authorization: `Bearer ${mailbox.token}`,
-          },
-        });
+        let newMessages: MailTmMiniMessage[] = [];
 
-        const data = await res.json();
+        try {
+          const res = await getMessages(mailbox.token);
+          newMessages = res.messages || [];
+        } catch (clientErr: unknown) {
+          if (clientErr instanceof MailTmError && clientErr.status === 429) {
+            const waitTime = clientErr.retryAfter || 30;
+            setRateLimitTotal(waitTime);
+            setRateLimitRemaining(waitTime);
+            return;
+          }
 
-        if (res.status === 429 || data?.isRateLimited) {
-          const waitTime = data?.retryAfter || 30;
-          setRateLimitTotal(waitTime);
-          setRateLimitRemaining(waitTime);
-          return;
+          // Fallback to server route
+          try {
+            const res = await fetch("/api/mailbox/messages", {
+              headers: {
+                Authorization: `Bearer ${mailbox.token}`,
+              },
+            });
+
+            const data = await res.json();
+
+            if (res.status === 429 || data?.isRateLimited) {
+              const waitTime = data?.retryAfter || 30;
+              setRateLimitTotal(waitTime);
+              setRateLimitRemaining(waitTime);
+              return;
+            }
+
+            if (res.status === 401) {
+              return;
+            }
+
+            if (Array.isArray(data?.messages)) {
+              newMessages = data.messages;
+            }
+          } catch {
+            return;
+          }
         }
-
-        if (res.status === 401) {
-          return;
-        }
-
-        if (Array.isArray(data?.messages)) {
-          const newMessages: MailTmMiniMessage[] = data.messages;
           const prevCount = prevMessageCountRef.current[mailbox.address] ?? 0;
 
           // Check if new messages arrived
@@ -430,7 +492,6 @@ export default function HomePage() {
               m.address === mailbox.address ? { ...m, unreadCount: unread } : m
             )
           );
-        }
       } catch {
         // Non-blocking
       } finally {
@@ -516,40 +577,24 @@ export default function HomePage() {
 
     setIsCreatingMailbox(true);
     try {
-      const res = await fetch("/api/mailbox/create", { method: "POST" });
-      const data = await res.json();
+      const newMb = await provisionMailbox();
+      const updated = [...mailboxes, newMb];
+      setMailboxes(updated);
+      setActiveAddress(newMb.address);
+      persistMailboxes(updated, newMb.address);
 
-      if (res.status === 429 || data?.isRateLimited) {
-        const waitTime = data?.retryAfter || 30;
+      toast.success("New mailbox created & activated!", {
+        description: newMb.address,
+      });
+    } catch (err) {
+      if (err instanceof MailTmError && err.status === 429) {
+        const waitTime = err.retryAfter || 30;
         setRateLimitTotal(waitTime);
         setRateLimitRemaining(waitTime);
         toast.error(`Rate limit reached. Please wait ${waitTime}s before creating.`);
-        return;
-      }
-
-      if (data?.mailbox?.address && data?.mailbox?.token) {
-        const newMb: StoredMailbox = {
-          sessionId: data.mailbox.sessionId,
-          address: data.mailbox.address,
-          token: data.mailbox.token,
-          accountId: data.mailbox.accountId,
-          createdAt: data.mailbox.createdAt,
-          unreadCount: 0,
-        };
-
-        const updated = [...mailboxes, newMb];
-        setMailboxes(updated);
-        setActiveAddress(newMb.address);
-        persistMailboxes(updated, newMb.address);
-
-        toast.success("New mailbox created & activated!", {
-          description: newMb.address,
-        });
       } else {
-        toast.error(data?.error || "Failed to create mailbox.");
+        toast.error("Error creating mailbox.");
       }
-    } catch {
-      toast.error("Error creating mailbox.");
     } finally {
       setIsCreatingMailbox(false);
     }
@@ -564,44 +609,24 @@ export default function HomePage() {
 
     setIsCreatingMailbox(true);
     try {
-      const res = await fetch("/api/mailbox/create", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prefix }),
-      });
-      const data = await res.json();
+      const newMb = await provisionMailbox(prefix);
+      const updated = [...mailboxes, newMb];
+      setMailboxes(updated);
+      setActiveAddress(newMb.address);
+      persistMailboxes(updated, newMb.address);
 
-      if (res.status === 429 || data?.isRateLimited) {
-        const waitTime = data?.retryAfter || 30;
+      toast.success("Custom mailbox created & activated!", {
+        description: newMb.address,
+      });
+    } catch (err) {
+      if (err instanceof MailTmError && err.status === 429) {
+        const waitTime = err.retryAfter || 30;
         setRateLimitTotal(waitTime);
         setRateLimitRemaining(waitTime);
         toast.error(`Rate limit reached. Please wait ${waitTime}s before creating.`);
-        return;
-      }
-
-      if (data?.mailbox?.address && data?.mailbox?.token) {
-        const newMb: StoredMailbox = {
-          sessionId: data.mailbox.sessionId,
-          address: data.mailbox.address,
-          token: data.mailbox.token,
-          accountId: data.mailbox.accountId,
-          createdAt: data.mailbox.createdAt,
-          unreadCount: 0,
-        };
-
-        const updated = [...mailboxes, newMb];
-        setMailboxes(updated);
-        setActiveAddress(newMb.address);
-        persistMailboxes(updated, newMb.address);
-
-        toast.success("Custom mailbox created & activated!", {
-          description: newMb.address,
-        });
       } else {
-        toast.error(data?.error || "Failed to create custom mailbox.");
+        toast.error(err instanceof Error ? err.message : "Error creating custom mailbox.");
       }
-    } catch {
-      toast.error("Error creating custom mailbox.");
     } finally {
       setIsCreatingMailbox(false);
     }
@@ -646,24 +671,19 @@ export default function HomePage() {
 
     setIsLoadingAddress(true);
     try {
-      await fetch("/api/mailbox/delete", { method: "POST" });
-      const createRes = await fetch("/api/mailbox/create", { method: "POST" });
-      const createData = await createRes.json();
-
-      if (createData?.mailbox?.address && createData?.mailbox?.token) {
-        const newMb: StoredMailbox = {
-          sessionId: createData.mailbox.sessionId,
-          address: createData.mailbox.address,
-          token: createData.mailbox.token,
-          accountId: createData.mailbox.accountId,
-          createdAt: createData.mailbox.createdAt,
-          unreadCount: 0,
-        };
-        setMailboxes([newMb]);
-        setActiveAddress(newMb.address);
-        persistMailboxes([newMb], newMb.address);
-        toast.success("Mailbox reset with fresh address.");
+      try {
+        if (activeMailbox.accountId && activeMailbox.token) {
+          await deleteAccount(activeMailbox.token, activeMailbox.accountId);
+        }
+      } catch {
+        fetch("/api/mailbox/delete", { method: "POST" }).catch(() => {});
       }
+
+      const newMb = await provisionMailbox();
+      setMailboxes([newMb]);
+      setActiveAddress(newMb.address);
+      persistMailboxes([newMb], newMb.address);
+      toast.success("Mailbox reset with fresh address.");
     } catch {
       toast.error("Error resetting mailbox.");
     } finally {
@@ -677,14 +697,21 @@ export default function HomePage() {
     setSelectedMessageId(id);
     setIsLoadingSelected(true);
     try {
-      const res = await fetch(`/api/mailbox/messages/${encodeURIComponent(id)}`, {
-        headers: {
-          Authorization: `Bearer ${activeMailbox.token}`,
-        },
-      });
-      const data = await res.json();
-      if (data?.message) {
-        setSelectedMessage(data.message);
+      let fullMsg: MailTmFullMessage | null = null;
+      try {
+        fullMsg = await getMessage(activeMailbox.token, id);
+      } catch {
+        const res = await fetch(`/api/mailbox/messages/${encodeURIComponent(id)}`, {
+          headers: {
+            Authorization: `Bearer ${activeMailbox.token}`,
+          },
+        });
+        const data = await res.json();
+        if (data?.message) fullMsg = data.message;
+      }
+
+      if (fullMsg) {
+        setSelectedMessage(fullMsg);
       } else {
         toast.error("Failed to load email details.");
       }
@@ -701,24 +728,23 @@ export default function HomePage() {
     if (!activeMailbox?.token) return;
 
     try {
-      const res = await fetch(`/api/mailbox/messages/${encodeURIComponent(id)}`, {
-        method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${activeMailbox.token}`,
-        },
-      });
-      const data = await res.json();
-
-      if (data?.success) {
-        setMessages((prev) => prev.filter((m) => m.id !== id));
-        if (selectedMessageId === id) {
-          setSelectedMessageId(null);
-          setSelectedMessage(null);
-        }
-        toast.success("Email deleted.");
-      } else {
-        toast.error("Failed to delete email.");
+      try {
+        await deleteMessage(activeMailbox.token, id);
+      } catch {
+        await fetch(`/api/mailbox/messages/${encodeURIComponent(id)}`, {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${activeMailbox.token}`,
+          },
+        });
       }
+
+      setMessages((prev) => prev.filter((m) => m.id !== id));
+      if (selectedMessageId === id) {
+        setSelectedMessageId(null);
+        setSelectedMessage(null);
+      }
+      toast.success("Email deleted.");
     } catch {
       toast.error("Error deleting email.");
     }
