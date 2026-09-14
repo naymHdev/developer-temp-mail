@@ -18,7 +18,12 @@ export const metadata: Metadata = {
   description:
     "Fast, zero-cost disposable temporary email generator for developers with smart OTP extraction, borderless warm dark UI, and real-time API health telemetry.",
   icons: {
-    icon: "/favicon.ico",
+    icon: [
+      { url: "/favicon.ico" },
+      { url: "/favicon.ico", sizes: "any" },
+    ],
+    shortcut: "/favicon.ico",
+    apple: "/favicon.ico",
   },
 };
 
