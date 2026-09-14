@@ -6,8 +6,9 @@ import {
   MailTmTokenResponse,
 } from "@/types/mailtm";
 
-const API_BASE =
-  process.env.NEXT_PUBLIC_MAILTM_API_URL || "https://api.mail.tm";
+const API_BASE = (
+  process.env.NEXT_PUBLIC_MAILTM_API_URL || "https://api.mail.tm"
+).replace(/\/+$/, "");
 
 export class MailTmError extends Error {
   status: number;
@@ -33,6 +34,12 @@ async function request<T>(
   }
   if (options.body && !headers.has("Content-Type")) {
     headers.set("Content-Type", "application/json");
+  }
+  if (!headers.has("User-Agent")) {
+    headers.set(
+      "User-Agent",
+      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36"
+    );
   }
 
   const controller = new AbortController();
@@ -65,14 +72,25 @@ async function request<T>(
       }
 
       try {
-        const errorData = await response.json();
-        if (errorData.message) {
-          errorMessage = errorData.message;
-        } else if (errorData["hydra:description"]) {
-          errorMessage = errorData["hydra:description"];
+        const rawText = await response.text();
+        try {
+          const errorData = JSON.parse(rawText);
+          if (errorData.message) {
+            errorMessage = errorData.message;
+          } else if (errorData["hydra:description"]) {
+            errorMessage = errorData["hydra:description"];
+          } else if (errorData.detail) {
+            errorMessage = errorData.detail;
+          } else if (Array.isArray(errorData.violations) && errorData.violations.length > 0) {
+            errorMessage = errorData.violations.map((v: { message: string }) => v.message).join(", ");
+          }
+        } catch {
+          if (rawText && rawText.length < 200) {
+            errorMessage = `${errorMessage} (${rawText})`;
+          }
         }
       } catch {
-        // use default message
+        // Fallback
       }
 
       if (response.status === 429) {
@@ -227,25 +245,46 @@ export async function generateNewMailbox(customPrefix?: string): Promise<{
     throw new MailTmError("No active domains available from Mail.tm", 503);
   }
 
-  // Pick the first active domain
-  const chosenDomain = domains[0].domain;
-
-  const prefix = (customPrefix || "dev")
+  // Clean prefix: lowercase alphanumeric only
+  const cleanPrefix = (customPrefix || "dev")
     .toLowerCase()
-    .replace(/[^a-z0-9_.-]/g, "")
-    .slice(0, 15);
+    .replace(/[^a-z0-9]/g, "")
+    .slice(0, 10);
 
-  const username = `${prefix || "dev"}_${generateRandomSuffix()}`;
-  const address = `${username}@${chosenDomain}`;
-  const password = generateRandomPassword();
+  // Try creating with available domains
+  let lastError: unknown = null;
 
-  const account = await createAccount(address, password);
-  const tokenData = await getToken(address, password);
+  for (const domainObj of domains.slice(0, 2)) {
+    try {
+      const username = `${cleanPrefix || "dev"}${generateRandomSuffix()}`;
+      const address = `${username}@${domainObj.domain}`;
+      const password = generateRandomPassword();
 
-  return {
-    address: account.address,
-    password,
-    token: tokenData.token,
-    accountId: account.id,
-  };
+      const account = await createAccount(address, password);
+      const tokenData = await getToken(address, password);
+
+      return {
+        address: account.address,
+        password,
+        token: tokenData.token,
+        accountId: account.id,
+      };
+    } catch (err) {
+      lastError = err;
+      // If 429 rate limited, don't loop
+      if (err instanceof MailTmError && err.status === 429) {
+        throw err;
+      }
+      // Wait a bit before next attempt
+      await new Promise((r) => setTimeout(r, 400));
+    }
+  }
+
+  if (lastError instanceof MailTmError) {
+    throw lastError;
+  }
+  throw new MailTmError(
+    lastError instanceof Error ? lastError.message : "Failed to provision mailbox with Mail.tm",
+    500
+  );
 }

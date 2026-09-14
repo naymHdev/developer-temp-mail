@@ -1,0 +1,15 @@
+{
+  "default_branch": "main",
+  "branches": [
+    "feat/update-favicon",
+    "main"
+  ],
+  "parent": {
+    "feat/update-favicon": "main",
+    "main": null
+  },
+  "order": [
+    "main",
+    "feat/update-favicon"
+  ]
+}
