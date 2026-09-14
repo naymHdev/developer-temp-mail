@@ -14,9 +14,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "DevTempMail — Disposable Developer Email Inbox",
+  title: "DTMail — Disposable Developer Email Inbox",
   description:
-    "Fast, zero-cost disposable temporary email generator for developers to test sign-up flows and authentication.",
+    "Fast, zero-cost disposable temporary email generator for developers with smart OTP extraction, borderless warm dark UI, and real-time API health telemetry.",
   icons: {
     icon: "/favicon.ico",
   },
@@ -32,7 +32,7 @@ export default function RootLayout({
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} dark h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col bg-[#090a0f] text-slate-100 font-sans selection:bg-sky-500/30 selection:text-sky-200">
+      <body className="min-h-full flex flex-col bg-[#0d0e14] text-slate-100 font-sans selection:bg-amber-500/25 selection:text-amber-200">
         {children}
         <Toaster position="bottom-right" richColors />
       </body>

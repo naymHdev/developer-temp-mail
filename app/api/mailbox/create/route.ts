@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { generateNewMailbox } from "@/lib/mailtm";
+import { generateNewMailbox, MailTmError } from "@/lib/mailtm";
 import { saveSessionMailbox } from "@/lib/session";
 
 export const dynamic = "force-dynamic";
@@ -32,12 +32,26 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       success: true,
       mailbox: {
-        address,
-        accountId,
         sessionId,
+        address,
+        token,
+        accountId,
+        createdAt: new Date().toISOString(),
       },
     });
   } catch (error) {
+    if (error instanceof MailTmError && error.status === 429) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: error.message,
+          isRateLimited: true,
+          retryAfter: error.retryAfter || 30,
+        },
+        { status: 429 }
+      );
+    }
+
     return NextResponse.json(
       {
         success: false,

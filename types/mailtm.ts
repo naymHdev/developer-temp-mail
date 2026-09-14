@@ -69,3 +69,12 @@ export interface MailboxSession {
   accountId: string;
   createdAt: string;
 }
+
+export interface StoredMailbox {
+  sessionId: string;
+  address: string;
+  token: string;
+  accountId: string;
+  createdAt: string;
+  unreadCount?: number;
+}

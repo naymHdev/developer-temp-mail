@@ -9,9 +9,20 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getSessionMailbox();
+    let token: string | null = null;
+    const authHeader = req.headers.get("Authorization");
+    if (authHeader && authHeader.startsWith("Bearer ")) {
+      token = authHeader.substring(7).trim();
+    }
 
-    if (!session?.token) {
+    if (!token) {
+      const session = await getSessionMailbox();
+      if (session?.token) {
+        token = session.token;
+      }
+    }
+
+    if (!token) {
       return NextResponse.json(
         { error: "No active mailbox session found" },
         { status: 401 }
@@ -23,7 +34,7 @@ export async function GET(
       return NextResponse.json({ error: "Missing message ID" }, { status: 400 });
     }
 
-    const message = await getMessage(session.token, id);
+    const message = await getMessage(token, id);
 
     return NextResponse.json({ message });
   } catch (error) {
@@ -41,9 +52,20 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getSessionMailbox();
+    let token: string | null = null;
+    const authHeader = req.headers.get("Authorization");
+    if (authHeader && authHeader.startsWith("Bearer ")) {
+      token = authHeader.substring(7).trim();
+    }
 
-    if (!session?.token) {
+    if (!token) {
+      const session = await getSessionMailbox();
+      if (session?.token) {
+        token = session.token;
+      }
+    }
+
+    if (!token) {
       return NextResponse.json(
         { error: "No active mailbox session found" },
         { status: 401 }
@@ -55,7 +77,7 @@ export async function DELETE(
       return NextResponse.json({ error: "Missing message ID" }, { status: 400 });
     }
 
-    await deleteMessage(session.token, id);
+    await deleteMessage(token, id);
 
     return NextResponse.json({ success: true });
   } catch (error) {

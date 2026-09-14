@@ -9,7 +9,6 @@ import {
   Clock,
   Trash2,
   Radio,
-  Sparkles,
 } from "lucide-react";
 import { MailTmMiniMessage } from "@/types/mailtm";
 import { Input } from "@/components/ui/input";
@@ -45,49 +44,50 @@ export function InboxList({
   });
 
   return (
-    <div className="flex h-full flex-col rounded-2xl border border-slate-800 bg-slate-900/60 backdrop-blur-md overflow-hidden">
+    <div className="flex h-full flex-col rounded-3xl bg-[#141622]/95 backdrop-blur-2xl shadow-2xl shadow-black/50 overflow-hidden">
       {/* Header & Search */}
-      <div className="flex flex-col gap-2.5 border-b border-slate-800/80 p-4">
+      <div className="flex flex-col gap-3 p-5">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <h2 className="text-sm font-semibold text-slate-200">Inbox</h2>
-            <Badge variant="secondary" className="font-mono text-xs">
+            <h2 className="text-sm font-bold text-slate-100">Live Inbox</h2>
+            <span className="rounded-full bg-amber-500/15 px-2.5 py-0.5 font-mono text-xs font-bold text-amber-300">
               {messages.length}
-            </Badge>
+            </span>
           </div>
           {messages.length > 0 && (
-            <span className="text-[11px] text-slate-500 font-mono">
-              Auto-sync active
+            <span className="text-[11px] text-emerald-400 font-mono flex items-center gap-1">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+              Sync active
             </span>
           )}
         </div>
 
         <div className="relative">
-          <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-slate-500" />
-          <Input
+          <Search className="absolute left-3.5 top-3 h-3.5 w-3.5 text-slate-400" />
+          <input
             placeholder="Search sender, subject..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="h-8 pl-8 text-xs bg-slate-950/70 border-slate-800"
+            className="h-10 w-full rounded-2xl bg-[#0b0c12]/90 pl-9 pr-3 text-xs text-slate-100 placeholder:text-slate-500 shadow-inner focus:outline-none focus:ring-1 focus:ring-amber-400/50"
           />
         </div>
       </div>
 
       {/* Message List */}
-      <div className="flex-1 overflow-y-auto divide-y divide-slate-800/50">
+      <div className="flex-1 overflow-y-auto px-2 pb-2 space-y-1.5">
         {isLoading && messages.length === 0 ? (
-          <div className="flex flex-col gap-3 p-4">
+          <div className="flex flex-col gap-2.5 p-3">
             {[1, 2, 3].map((n) => (
               <div
                 key={n}
-                className="flex flex-col gap-2 rounded-lg border border-slate-800/40 bg-slate-950/40 p-3 animate-pulse"
+                className="flex flex-col gap-2 rounded-2xl bg-[#1b1d2c]/60 p-4 animate-pulse"
               >
                 <div className="flex justify-between items-center">
-                  <div className="h-3 w-28 bg-slate-800 rounded" />
-                  <div className="h-2 w-12 bg-slate-800 rounded" />
+                  <div className="h-3 w-28 bg-slate-800 rounded-full" />
+                  <div className="h-2 w-12 bg-slate-800 rounded-full" />
                 </div>
-                <div className="h-3.5 w-3/4 bg-slate-800 rounded" />
-                <div className="h-2.5 w-full bg-slate-800/60 rounded" />
+                <div className="h-3.5 w-3/4 bg-slate-800 rounded-full" />
+                <div className="h-2.5 w-full bg-slate-800/60 rounded-full" />
               </div>
             ))}
           </div>
@@ -101,17 +101,17 @@ export function InboxList({
             ) : (
               <div className="flex flex-col items-center gap-4">
                 {/* Radar animation container */}
-                <div className="relative flex h-20 w-20 items-center justify-center">
-                  <div className="absolute h-16 w-16 rounded-full bg-sky-500/10 animate-radar" />
-                  <div className="absolute h-12 w-12 rounded-full bg-sky-500/15" />
-                  <div className="relative flex h-10 w-10 items-center justify-center rounded-full bg-slate-900 border border-sky-500/40 shadow-lg shadow-sky-500/10">
-                    <Radio className="h-5 w-5 text-sky-400 animate-pulse" />
+                <div className="relative flex h-24 w-24 items-center justify-center">
+                  <div className="absolute h-20 w-20 rounded-full bg-amber-500/10 animate-radar" />
+                  <div className="absolute h-14 w-14 rounded-full bg-amber-500/15" />
+                  <div className="relative flex h-11 w-11 items-center justify-center rounded-2xl bg-[#1a1d2c] shadow-xl shadow-amber-500/10">
+                    <Radio className="h-5 w-5 text-amber-400 animate-pulse" />
                   </div>
                 </div>
 
                 <div className="space-y-1">
-                  <h3 className="text-sm font-semibold text-slate-200">
-                    Waiting for emails...
+                  <h3 className="text-sm font-bold text-slate-100">
+                    Waiting for inbound emails...
                   </h3>
                   <p className="text-xs text-slate-400 max-w-[220px] leading-relaxed">
                     Send a test email to your temporary address above to see it appear here instantly.
@@ -127,46 +127,44 @@ export function InboxList({
               <div
                 key={msg.id}
                 onClick={() => onSelectMessage(msg.id)}
-                className={`group relative flex cursor-pointer flex-col gap-1.5 p-3.5 transition-all text-left ${
+                className={`group relative flex cursor-pointer flex-col gap-1.5 p-4 transition-all rounded-2xl text-left ${
                   isSelected
-                    ? "bg-slate-800/90 border-l-2 border-l-sky-400 shadow-sm"
-                    : "hover:bg-slate-800/40 border-l-2 border-l-transparent"
+                    ? "bg-[#23263b] shadow-xl shadow-black/40 text-slate-100"
+                    : "bg-[#181a27]/60 hover:bg-[#1f2233] text-slate-300"
                 }`}
               >
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex items-center gap-2 truncate">
                     {!msg.seen && (
-                      <span className="h-1.5 w-1.5 rounded-full bg-sky-400 shrink-0 shadow-[0_0_6px_rgba(56,189,248,0.8)]" />
+                      <span className="h-2 w-2 rounded-full bg-amber-400 shrink-0 shadow-[0_0_8px_rgba(245,158,11,0.8)]" />
                     )}
                     <span
-                      className={`text-xs font-semibold truncate ${
-                        isSelected ? "text-sky-300" : "text-slate-200"
+                      className={`text-xs font-bold truncate ${
+                        isSelected ? "text-amber-300" : "text-slate-200"
                       }`}
                     >
                       {msg.from.name || msg.from.address}
                     </span>
                   </div>
 
-                  <div className="flex items-center gap-1.5 shrink-0 text-[11px] text-slate-500">
+                  <div className="flex items-center gap-1.5 shrink-0 text-[11px] text-slate-400">
                     {msg.hasAttachments && (
-                      <Paperclip className="h-3 w-3 text-slate-400" />
+                      <Paperclip className="h-3 w-3 text-amber-400" />
                     )}
                     <span>{formatDate(msg.createdAt)}</span>
-                    <Button
-                      variant="ghost"
-                      size="iconSm"
+                    <button
                       onClick={(e) => onDeleteMessage(msg.id, e)}
-                      className="opacity-0 group-hover:opacity-100 h-6 w-6 text-slate-500 hover:text-red-400 hover:bg-red-500/10 transition-opacity ml-1"
+                      className="opacity-0 group-hover:opacity-100 h-6 w-6 rounded-lg text-slate-400 hover:text-red-400 hover:bg-red-500/10 transition-all flex items-center justify-center ml-1"
                       title="Delete email"
                     >
                       <Trash2 className="h-3 w-3" />
-                    </Button>
+                    </button>
                   </div>
                 </div>
 
                 <h4
-                  className={`text-xs font-medium line-clamp-1 ${
-                    isSelected ? "text-slate-100" : "text-slate-300"
+                  className={`text-xs font-semibold line-clamp-1 ${
+                    isSelected ? "text-slate-100" : "text-slate-200"
                   }`}
                 >
                   {msg.subject || "(No Subject)"}

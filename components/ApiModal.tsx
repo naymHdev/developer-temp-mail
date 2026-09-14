@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { Terminal, Copy, Check, Code, ShieldCheck } from "lucide-react";
+import { Terminal, Copy, Check, ShieldCheck, Zap } from "lucide-react";
 import { toast } from "sonner";
 
 interface ApiModalProps {
@@ -88,29 +88,37 @@ def wait_for_verification_code(token: str) -> str:
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-2xl max-h-[85vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Terminal className="h-5 w-5 text-sky-400" />
+      <DialogContent className="sm:max-w-2xl max-h-[88vh] overflow-y-auto">
+        <DialogHeader className="space-y-2">
+          <DialogTitle className="flex items-center gap-2.5 text-slate-100">
+            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-amber-500/15 text-amber-400">
+              <Terminal className="h-4 w-4" />
+            </div>
             <span>Developer Test Automation & API Docs</span>
           </DialogTitle>
-          <DialogDescription>
-            DevTempMail is built on top of Mail.tm&apos;s open, zero-cost API. Use these snippets to automate sign-up flows in your testing pipelines.
+          <DialogDescription className="text-xs text-slate-400">
+            <span className="font-semibold text-amber-300">DTMail</span> is powered by Mail.tm&apos;s open, zero-cost API. Use these integration snippets to automate sign-up and OTP verification flows in your CI/CD pipelines.
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex items-center gap-2 rounded-lg border border-slate-800 bg-slate-950/60 p-3 text-xs text-slate-300">
+        <div className="flex items-center gap-2.5 rounded-2xl bg-[#0b0c12]/90 p-3.5 text-xs text-slate-300 shadow-inner">
           <ShieldCheck className="h-4 w-4 text-emerald-400 shrink-0" />
           <span>
-            Zero API keys required. All authentication is scoped per disposable account via JWT.
+            Zero API keys needed. All authentication is scoped per disposable mailbox via JWT token.
           </span>
         </div>
 
-        <Tabs defaultValue="node" className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="node">Node.js / E2E</TabsTrigger>
-            <TabsTrigger value="curl">cURL</TabsTrigger>
-            <TabsTrigger value="python">Python</TabsTrigger>
+        <Tabs defaultValue="node" className="w-full pt-1">
+          <TabsList className="grid w-full grid-cols-3 bg-[#0b0c12]/90 rounded-2xl p-1">
+            <TabsTrigger value="node" className="rounded-xl text-xs font-semibold">
+              Node.js / E2E
+            </TabsTrigger>
+            <TabsTrigger value="curl" className="rounded-xl text-xs font-semibold">
+              cURL
+            </TabsTrigger>
+            <TabsTrigger value="python" className="rounded-xl text-xs font-semibold">
+              Python
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="node" className="relative mt-3">
@@ -118,16 +126,16 @@ def wait_for_verification_code(token: str) -> str:
               variant="ghost"
               size="sm"
               onClick={() => copyCode(nodeExample, "node")}
-              className="absolute right-2 top-2 h-7 gap-1 text-xs text-slate-300 z-10"
+              className="absolute right-3 top-3 h-7 gap-1 text-xs text-slate-300 bg-[#1b1e2e]/90 hover:bg-[#25283c] rounded-lg shadow-md"
             >
               {copiedKey === "node" ? (
                 <Check className="h-3.5 w-3.5 text-emerald-400" />
               ) : (
-                <Copy className="h-3.5 w-3.5" />
+                <Copy className="h-3.5 w-3.5 text-amber-400" />
               )}
               <span>Copy</span>
             </Button>
-            <pre className="overflow-x-auto rounded-lg bg-slate-950 p-4 font-mono text-xs text-sky-300">
+            <pre className="overflow-x-auto rounded-2xl bg-[#0b0c12]/95 p-4 font-mono text-xs text-amber-300 shadow-inner">
               {nodeExample}
             </pre>
           </TabsContent>
@@ -137,16 +145,16 @@ def wait_for_verification_code(token: str) -> str:
               variant="ghost"
               size="sm"
               onClick={() => copyCode(curlExample, "curl")}
-              className="absolute right-2 top-2 h-7 gap-1 text-xs text-slate-300 z-10"
+              className="absolute right-3 top-3 h-7 gap-1 text-xs text-slate-300 bg-[#1b1e2e]/90 hover:bg-[#25283c] rounded-lg shadow-md"
             >
               {copiedKey === "curl" ? (
                 <Check className="h-3.5 w-3.5 text-emerald-400" />
               ) : (
-                <Copy className="h-3.5 w-3.5" />
+                <Copy className="h-3.5 w-3.5 text-amber-400" />
               )}
               <span>Copy</span>
             </Button>
-            <pre className="overflow-x-auto rounded-lg bg-slate-950 p-4 font-mono text-xs text-sky-300">
+            <pre className="overflow-x-auto rounded-2xl bg-[#0b0c12]/95 p-4 font-mono text-xs text-amber-300 shadow-inner">
               {curlExample}
             </pre>
           </TabsContent>
@@ -156,16 +164,16 @@ def wait_for_verification_code(token: str) -> str:
               variant="ghost"
               size="sm"
               onClick={() => copyCode(pythonExample, "python")}
-              className="absolute right-2 top-2 h-7 gap-1 text-xs text-slate-300 z-10"
+              className="absolute right-3 top-3 h-7 gap-1 text-xs text-slate-300 bg-[#1b1e2e]/90 hover:bg-[#25283c] rounded-lg shadow-md"
             >
               {copiedKey === "python" ? (
                 <Check className="h-3.5 w-3.5 text-emerald-400" />
               ) : (
-                <Copy className="h-3.5 w-3.5" />
+                <Copy className="h-3.5 w-3.5 text-amber-400" />
               )}
               <span>Copy</span>
             </Button>
-            <pre className="overflow-x-auto rounded-lg bg-slate-950 p-4 font-mono text-xs text-sky-300">
+            <pre className="overflow-x-auto rounded-2xl bg-[#0b0c12]/95 p-4 font-mono text-xs text-amber-300 shadow-inner">
               {pythonExample}
             </pre>
           </TabsContent>

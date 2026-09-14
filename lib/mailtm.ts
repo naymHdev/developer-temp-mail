@@ -9,12 +9,15 @@ import {
 const API_BASE =
   process.env.NEXT_PUBLIC_MAILTM_API_URL || "https://api.mail.tm";
 
-class MailTmError extends Error {
+export class MailTmError extends Error {
   status: number;
-  constructor(message: string, status: number = 500) {
+  retryAfter: number;
+
+  constructor(message: string, status: number = 500, retryAfter: number = 30) {
     super(message);
     this.name = "MailTmError";
     this.status = status;
+    this.retryAfter = retryAfter;
   }
 }
 
@@ -51,6 +54,16 @@ async function request<T>(
 
     if (!response.ok) {
       let errorMessage = `Mail.tm API error: ${response.status} ${response.statusText}`;
+      let retryAfter = 30;
+
+      const retryHeader = response.headers.get("Retry-After");
+      if (retryHeader) {
+        const parsed = parseInt(retryHeader, 10);
+        if (!isNaN(parsed) && parsed > 0) {
+          retryAfter = parsed;
+        }
+      }
+
       try {
         const errorData = await response.json();
         if (errorData.message) {
@@ -68,7 +81,7 @@ async function request<T>(
         errorMessage = "Mailbox session token expired or invalid.";
       }
 
-      throw new MailTmError(errorMessage, response.status);
+      throw new MailTmError(errorMessage, response.status, retryAfter);
     }
 
     return (await response.json()) as T;
