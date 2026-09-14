@@ -1,0 +1,13 @@
+{
+  "name": "dtmail-cloudflare-proxy",
+  "version": "1.0.0",
+  "description": "High-performance zero-latency Mail.tm proxy on Cloudflare Edge",
+  "main": "src/index.ts",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy"
+  },
+  "devDependencies": {
+    "wrangler": "^4.131.0"
+  }
+}
