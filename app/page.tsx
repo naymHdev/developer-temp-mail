@@ -364,10 +364,12 @@ export default function HomePage() {
           setRateLimitRemaining(waitTime);
           toast.error(`Rate limit reached. Please wait ${waitTime}s.`);
         } else {
-          toast.error("Could not initialize temporary mailbox.");
+          console.error("Mailbox provisioning error:", err);
+          toast.error(err instanceof Error ? err.message : "Could not initialize temporary mailbox.");
         }
       }
-    } catch {
+    } catch (err) {
+      console.error("initMailboxes caught:", err);
       toast.error("Failed to connect to mailbox service.");
     } finally {
       setIsLoadingAddress(false);
