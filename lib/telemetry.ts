@@ -336,7 +336,7 @@ export async function getHistoricalTelemetry(range: "7d" | "30d" | "24h" = "7d")
     os: string | null;
     device: string | null;
     lastSeenAt: Date;
-    createdAt: Date;
+    firstSeenAt: Date;
     mailboxesCreated: number;
     totalVisits: number;
   }> = [];
@@ -355,7 +355,7 @@ export async function getHistoricalTelemetry(range: "7d" | "30d" | "24h" = "7d")
           os: true,
           device: true,
           lastSeenAt: true,
-          createdAt: true,
+          firstSeenAt: true,
           mailboxesCreated: true,
           totalVisits: true,
         },
