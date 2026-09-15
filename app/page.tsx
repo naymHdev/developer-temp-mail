@@ -1,6 +1,12 @@
 "use client";
 
-import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import React, {
+  useState,
+  useEffect,
+  useCallback,
+  useRef,
+  useMemo,
+} from "react";
 import { Navbar } from "@/components/Navbar";
 import { AddressBar } from "@/components/AddressBar";
 import { MailboxSwitcher } from "@/components/MailboxSwitcher";
@@ -12,7 +18,11 @@ import { CustomMailboxModal } from "@/components/CustomMailboxModal";
 import { ApiModal } from "@/components/ApiModal";
 import { WebhookRelayModal } from "@/components/WebhookRelayModal";
 import { ShortcutsModal } from "@/components/ShortcutsModal";
-import { MailTmMiniMessage, MailTmFullMessage, StoredMailbox } from "@/types/mailtm";
+import {
+  MailTmMiniMessage,
+  MailTmFullMessage,
+  StoredMailbox,
+} from "@/types/mailtm";
 import {
   generateNewMailbox,
   getMessages,
@@ -21,10 +31,18 @@ import {
   deleteAccount,
   MailTmError,
 } from "@/lib/mailtm";
-import { WebhookConfig, WebhookDeliveryLog, WebhookPayload } from "@/types/webhook";
+import {
+  WebhookConfig,
+  WebhookDeliveryLog,
+  WebhookPayload,
+} from "@/types/webhook";
 import { extractOtpAndLinks } from "@/lib/extractor";
 import { playNotificationSound } from "@/lib/audio";
-import { requestNotificationPermission, sendDesktopNotification } from "@/lib/notifications";
+import {
+  requestNotificationPermission,
+  sendDesktopNotification,
+} from "@/lib/notifications";
+import { trackAnonymousAction } from "@/components/TelemetryTracker";
 import { toast } from "sonner";
 
 const POLLING_INTERVAL_SECONDS = 5;
@@ -54,6 +72,9 @@ async function provisionMailbox(customPrefix?: string): Promise<StoredMailbox> {
       unreadCount: 0,
     };
 
+    // Track anonymous usage metric
+    trackAnonymousAction("mailbox_created");
+
     // Sync session cookie in background (fire-and-forget)
     fetch("/api/mailbox/save", {
       method: "POST",
@@ -76,7 +97,11 @@ async function provisionMailbox(customPrefix?: string): Promise<StoredMailbox> {
       });
       const createData = await res.json();
       if (res.status === 429 || createData?.isRateLimited) {
-        throw new MailTmError("Rate limit reached", 429, createData?.retryAfter || 30);
+        throw new MailTmError(
+          "Rate limit reached",
+          429,
+          createData?.retryAfter || 30,
+        );
       }
       if (createData?.mailbox?.address && createData?.mailbox?.token) {
         return {
@@ -92,7 +117,9 @@ async function provisionMailbox(customPrefix?: string): Promise<StoredMailbox> {
       // Fallback to rethrowing client error
     }
 
-    throw clientErr instanceof Error ? clientErr : new Error("Failed to provision mailbox");
+    throw clientErr instanceof Error
+      ? clientErr
+      : new Error("Failed to provision mailbox");
   }
 }
 
@@ -103,7 +130,8 @@ export default function HomePage() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [countdown, setCountdown] = useState(POLLING_INTERVAL_SECONDS);
   const [soundEnabled, setSoundEnabled] = useState(true);
-  const [desktopNotificationEnabled, setDesktopNotificationEnabled] = useState(false);
+  const [desktopNotificationEnabled, setDesktopNotificationEnabled] =
+    useState(false);
 
   // Rate Limit State
   const [rateLimitRemaining, setRateLimitRemaining] = useState<number>(0);
@@ -114,8 +142,11 @@ export default function HomePage() {
   const [isLoadingMessages, setIsLoadingMessages] = useState(false);
 
   // Message Viewer State
-  const [selectedMessageId, setSelectedMessageId] = useState<string | null>(null);
-  const [selectedMessage, setSelectedMessage] = useState<MailTmFullMessage | null>(null);
+  const [selectedMessageId, setSelectedMessageId] = useState<string | null>(
+    null,
+  );
+  const [selectedMessage, setSelectedMessage] =
+    useState<MailTmFullMessage | null>(null);
   const [isLoadingSelected, setIsLoadingSelected] = useState(false);
 
   // Modals
@@ -152,7 +183,11 @@ export default function HomePage() {
         setWebhookLogs(JSON.parse(savedLogs));
       }
       const savedNotif = localStorage.getItem(STORAGE_KEY_DESKTOP_NOTIF);
-      if (savedNotif === "true" && typeof window !== "undefined" && "Notification" in window) {
+      if (
+        savedNotif === "true" &&
+        typeof window !== "undefined" &&
+        "Notification" in window
+      ) {
         if (Notification.permission === "granted") {
           setDesktopNotificationEnabled(true);
         }
@@ -190,7 +225,10 @@ export default function HomePage() {
   const handleSaveWebhookConfig = (newConfig: WebhookConfig) => {
     setWebhookConfig(newConfig);
     try {
-      localStorage.setItem(STORAGE_KEY_WEBHOOK_CONFIG, JSON.stringify(newConfig));
+      localStorage.setItem(
+        STORAGE_KEY_WEBHOOK_CONFIG,
+        JSON.stringify(newConfig),
+      );
     } catch {
       // Fallback
     }
@@ -240,7 +278,10 @@ export default function HomePage() {
         setWebhookLogs((prev) => {
           const updated = [newLog, ...prev.slice(0, 49)];
           try {
-            localStorage.setItem(STORAGE_KEY_WEBHOOK_LOGS, JSON.stringify(updated));
+            localStorage.setItem(
+              STORAGE_KEY_WEBHOOK_LOGS,
+              JSON.stringify(updated),
+            );
           } catch {
             // Fallback
           }
@@ -260,7 +301,7 @@ export default function HomePage() {
         toast.error("Failed to relay webhook to internal proxy");
       }
     },
-    [webhookConfig]
+    [webhookConfig],
   );
 
   // Send Test Webhook Ping
@@ -280,7 +321,8 @@ export default function HomePage() {
         name: "DTMail Webhook Simulator",
       },
       subject: "Test Webhook Ping from DTMail",
-      intro: "This is a simulated webhook ping to test your local server integration.",
+      intro:
+        "This is a simulated webhook ping to test your local server integration.",
       otpCode: "581902",
       magicLinks: ["http://localhost:3000/auth/verify?token=test1234"],
       text: "Verification code: 581902. This is a simulated payload dispatched from DTMail.",
@@ -312,16 +354,22 @@ export default function HomePage() {
   }, [rateLimitRemaining]);
 
   // Save mailboxes to localStorage
-  const persistMailboxes = useCallback((updatedList: StoredMailbox[], currentActive?: string) => {
-    try {
-      localStorage.setItem(STORAGE_KEY_MAILBOXES, JSON.stringify(updatedList));
-      if (currentActive) {
-        localStorage.setItem(STORAGE_KEY_ACTIVE, currentActive);
+  const persistMailboxes = useCallback(
+    (updatedList: StoredMailbox[], currentActive?: string) => {
+      try {
+        localStorage.setItem(
+          STORAGE_KEY_MAILBOXES,
+          JSON.stringify(updatedList),
+        );
+        if (currentActive) {
+          localStorage.setItem(STORAGE_KEY_ACTIVE, currentActive);
+        }
+      } catch {
+        // Fallback
       }
-    } catch {
-      // Fallback
-    }
-  }, []);
+    },
+    [],
+  );
 
   // Initialize or restore mailboxes
   const initMailboxes = useCallback(async () => {
@@ -365,7 +413,11 @@ export default function HomePage() {
           toast.error(`Rate limit reached. Please wait ${waitTime}s.`);
         } else {
           console.error("Mailbox provisioning error:", err);
-          toast.error(err instanceof Error ? err.message : "Could not initialize temporary mailbox.");
+          toast.error(
+            err instanceof Error
+              ? err.message
+              : "Could not initialize temporary mailbox.",
+          );
         }
       }
     } catch (err) {
@@ -424,81 +476,85 @@ export default function HomePage() {
             return;
           }
         }
-          const prevCount = prevMessageCountRef.current[mailbox.address] ?? 0;
+        const prevCount = prevMessageCountRef.current[mailbox.address] ?? 0;
 
-          // Check if new messages arrived
-          if (newMessages.length > prevCount) {
-            const newlyArrived = newMessages.filter(
-              (m) => !processedMessageIdsRef.current.has(m.id)
-            );
+        // Check if new messages arrived
+        if (newMessages.length > prevCount) {
+          const newlyArrived = newMessages.filter(
+            (m) => !processedMessageIdsRef.current.has(m.id),
+          );
 
-            newlyArrived.forEach((msg) => {
-              processedMessageIdsRef.current.add(msg.id);
-              const extracted = extractOtpAndLinks(msg.subject, msg.intro || "");
+          newlyArrived.forEach((msg) => {
+            processedMessageIdsRef.current.add(msg.id);
+            const extracted = extractOtpAndLinks(msg.subject, msg.intro || "");
 
-              if (prevCount > 0) {
-                if (soundEnabled) {
-                  playNotificationSound();
-                }
+            if (prevCount > 0) {
+              if (soundEnabled) {
+                playNotificationSound();
+              }
 
-                // Desktop Notification
-                if (desktopNotificationEnabled) {
-                  const otpText = extracted.otpCode ? `[OTP: ${extracted.otpCode}] ` : "";
-                  sendDesktopNotification({
-                    title: `DTMail: New email for ${mailbox.address.split("@")[0]}`,
-                    body: `${otpText}${msg.from.name || msg.from.address}: ${msg.subject}`,
-                  });
-                }
-
-                const [prefix] = mailbox.address.split("@");
-                toast.success(`New email for [${prefix}]!`, {
-                  description: `${msg.from.name || msg.from.address}: ${msg.subject}`,
+              // Desktop Notification
+              if (desktopNotificationEnabled) {
+                const otpText = extracted.otpCode
+                  ? `[OTP: ${extracted.otpCode}] `
+                  : "";
+                sendDesktopNotification({
+                  title: `DTMail: New email for ${mailbox.address.split("@")[0]}`,
+                  body: `${otpText}${msg.from.name || msg.from.address}: ${msg.subject}`,
                 });
               }
 
-              // Webhook relay auto-dispatch
-              if (webhookConfig.enabled && prevCount > 0) {
-                const payload: WebhookPayload = {
-                  event: "email.received",
-                  mailbox: mailbox.address,
-                  messageId: msg.id,
-                  from: msg.from,
-                  subject: msg.subject,
-                  intro: msg.intro,
-                  otpCode: extracted.otpCode,
-                  magicLinks: extracted.magicLinks,
-                  text: msg.intro || "",
-                  timestamp: msg.createdAt,
-                };
-                dispatchWebhookRelay(payload);
-              }
-            });
-          }
-
-          prevMessageCountRef.current[mailbox.address] = newMessages.length;
-
-          // Update active messages if this is the active mailbox
-          if (mailbox.address === activeAddress) {
-            setMessages(newMessages);
-            if (newMessages.length > 0) {
-              document.title = `(${newMessages.length}) DTMail — Disposable Inbox`;
-            } else {
-              document.title = "DTMail — Disposable Developer Email Inbox";
+              const [prefix] = mailbox.address.split("@");
+              toast.success(`New email for [${prefix}]!`, {
+                description: `${msg.from.name || msg.from.address}: ${msg.subject}`,
+              });
             }
-          }
 
-          // Update unread count for this mailbox in the switcher
-          const unread = newMessages.filter((m) => !m.seen).length;
-          setMailboxes((prev) =>
-            prev.map((m) =>
-              m.address === mailbox.address ? { ...m, unreadCount: unread } : m
-            )
-          );
+            // Webhook relay auto-dispatch
+            if (webhookConfig.enabled && prevCount > 0) {
+              const payload: WebhookPayload = {
+                event: "email.received",
+                mailbox: mailbox.address,
+                messageId: msg.id,
+                from: msg.from,
+                subject: msg.subject,
+                intro: msg.intro,
+                otpCode: extracted.otpCode,
+                magicLinks: extracted.magicLinks,
+                text: msg.intro || "",
+                timestamp: msg.createdAt,
+              };
+              dispatchWebhookRelay(payload);
+            }
+          });
+        }
+
+        prevMessageCountRef.current[mailbox.address] = newMessages.length;
+
+        // Update active messages if this is the active mailbox
+        if (mailbox.address === activeAddress) {
+          setMessages(newMessages);
+          if (newMessages.length > 0) {
+            document.title = `(${newMessages.length}) DTMail — Disposable Inbox`;
+          } else {
+            document.title = "DTMail — Disposable Developer Email Inbox";
+          }
+        }
+
+        // Update unread count for this mailbox in the switcher
+        const unread = newMessages.filter((m) => !m.seen).length;
+        setMailboxes((prev) =>
+          prev.map((m) =>
+            m.address === mailbox.address ? { ...m, unreadCount: unread } : m,
+          ),
+        );
       } catch {
         // Non-blocking
       } finally {
-        if (isManual && mailbox.address === activeAddress) setIsRefreshing(false);
-        if (mailbox.address === activeAddress) setCountdown(POLLING_INTERVAL_SECONDS);
+        if (isManual && mailbox.address === activeAddress)
+          setIsRefreshing(false);
+        if (mailbox.address === activeAddress)
+          setCountdown(POLLING_INTERVAL_SECONDS);
       }
     },
     [
@@ -508,7 +564,7 @@ export default function HomePage() {
       rateLimitRemaining,
       webhookConfig,
       dispatchWebhookRelay,
-    ]
+    ],
   );
 
   // Initial load
@@ -523,7 +579,7 @@ export default function HomePage() {
       setSelectedMessage(null);
       setIsLoadingMessages(true);
       fetchMessagesForMailbox(activeMailbox).finally(() =>
-        setIsLoadingMessages(false)
+        setIsLoadingMessages(false),
       );
     }
   }, [activeMailbox?.address, fetchMessagesForMailbox]);
@@ -573,7 +629,9 @@ export default function HomePage() {
   // Add new random mailbox
   const handleAddRandomMailbox = async () => {
     if (rateLimitRemaining > 0) {
-      toast.warning(`Rate limit cooldown active. Please wait ${rateLimitRemaining}s.`);
+      toast.warning(
+        `Rate limit cooldown active. Please wait ${rateLimitRemaining}s.`,
+      );
       return;
     }
 
@@ -593,7 +651,9 @@ export default function HomePage() {
         const waitTime = err.retryAfter || 30;
         setRateLimitTotal(waitTime);
         setRateLimitRemaining(waitTime);
-        toast.error(`Rate limit reached. Please wait ${waitTime}s before creating.`);
+        toast.error(
+          `Rate limit reached. Please wait ${waitTime}s before creating.`,
+        );
       } else {
         toast.error("Error creating mailbox.");
       }
@@ -605,7 +665,9 @@ export default function HomePage() {
   // Create custom prefix mailbox
   const handleCustomSubmit = async (prefix: string) => {
     if (rateLimitRemaining > 0) {
-      toast.warning(`Rate limit cooldown active. Please wait ${rateLimitRemaining}s.`);
+      toast.warning(
+        `Rate limit cooldown active. Please wait ${rateLimitRemaining}s.`,
+      );
       return;
     }
 
@@ -625,9 +687,13 @@ export default function HomePage() {
         const waitTime = err.retryAfter || 30;
         setRateLimitTotal(waitTime);
         setRateLimitRemaining(waitTime);
-        toast.error(`Rate limit reached. Please wait ${waitTime}s before creating.`);
+        toast.error(
+          `Rate limit reached. Please wait ${waitTime}s before creating.`,
+        );
       } else {
-        toast.error(err instanceof Error ? err.message : "Error creating custom mailbox.");
+        toast.error(
+          err instanceof Error ? err.message : "Error creating custom mailbox.",
+        );
       }
     } finally {
       setIsCreatingMailbox(false);
@@ -635,7 +701,10 @@ export default function HomePage() {
   };
 
   // Remove a mailbox
-  const handleRemoveMailbox = (addressToRemove: string, e: React.MouseEvent) => {
+  const handleRemoveMailbox = (
+    addressToRemove: string,
+    e: React.MouseEvent,
+  ) => {
     e.stopPropagation();
 
     if (mailboxes.length <= 1) {
@@ -667,7 +736,11 @@ export default function HomePage() {
       return;
     }
 
-    if (!confirm("Are you sure you want to delete this temporary mailbox? A fresh one will be generated.")) {
+    if (
+      !confirm(
+        "Are you sure you want to delete this temporary mailbox? A fresh one will be generated.",
+      )
+    ) {
       return;
     }
 
@@ -703,11 +776,14 @@ export default function HomePage() {
       try {
         fullMsg = await getMessage(activeMailbox.token, id);
       } catch {
-        const res = await fetch(`/api/mailbox/messages/${encodeURIComponent(id)}`, {
-          headers: {
-            Authorization: `Bearer ${activeMailbox.token}`,
+        const res = await fetch(
+          `/api/mailbox/messages/${encodeURIComponent(id)}`,
+          {
+            headers: {
+              Authorization: `Bearer ${activeMailbox.token}`,
+            },
           },
-        });
+        );
         const data = await res.json();
         if (data?.message) fullMsg = data.message;
       }
@@ -782,7 +858,9 @@ export default function HomePage() {
       if (key === "c" && activeAddress) {
         e.preventDefault();
         navigator.clipboard.writeText(activeAddress);
-        toast.success("Email copied! (Shortcut: C)", { description: activeAddress });
+        toast.success("Email copied! (Shortcut: C)", {
+          description: activeAddress,
+        });
         return;
       }
 
@@ -795,12 +873,14 @@ export default function HomePage() {
           const extracted = extractOtpAndLinks(
             selectedMessage.subject,
             selectedMessage.text,
-            htmlFirst
+            htmlFirst,
           );
           if (extracted.otpCode) {
             e.preventDefault();
             navigator.clipboard.writeText(extracted.otpCode);
-            toast.success(`OTP Code copied: ${extracted.otpCode} (Shortcut: O)`);
+            toast.success(
+              `OTP Code copied: ${extracted.otpCode} (Shortcut: O)`,
+            );
             return;
           }
         }
@@ -841,7 +921,9 @@ export default function HomePage() {
       if (key === "j" || e.key === "ArrowDown") {
         if (messages.length > 0) {
           e.preventDefault();
-          const currentIndex = messages.findIndex((m) => m.id === selectedMessageId);
+          const currentIndex = messages.findIndex(
+            (m) => m.id === selectedMessageId,
+          );
           const nextIndex =
             currentIndex === -1 || currentIndex === messages.length - 1
               ? 0
@@ -855,7 +937,9 @@ export default function HomePage() {
       if (key === "k" || e.key === "ArrowUp") {
         if (messages.length > 0) {
           e.preventDefault();
-          const currentIndex = messages.findIndex((m) => m.id === selectedMessageId);
+          const currentIndex = messages.findIndex(
+            (m) => m.id === selectedMessageId,
+          );
           const prevIndex =
             currentIndex <= 0 ? messages.length - 1 : currentIndex - 1;
           handleSelectMessage(messages[prevIndex].id);
@@ -910,7 +994,7 @@ export default function HomePage() {
           onScrollToHealth={scrollToHealth}
         />
 
-        <main className="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-5 p-4 sm:p-6 lg:p-8">
+        <main className="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-3.5 sm:gap-5 p-3 sm:p-6 lg:p-8">
           {/* Rate Limit Visual Countdown Banner */}
           {rateLimitRemaining > 0 && (
             <RateLimitBanner
@@ -948,10 +1032,14 @@ export default function HomePage() {
             onToggleSound={() => setSoundEnabled((prev) => !prev)}
           />
 
-          {/* Main Content: Split-Screen Inbox & Viewer */}
-          <div className="grid flex-1 grid-cols-1 gap-6 lg:grid-cols-12 min-h-[580px]">
-            {/* Left Column: Inbox List */}
-            <div className="lg:col-span-5 xl:col-span-4 h-[580px] lg:h-auto">
+          {/* Main Content: Split-Screen on Desktop, Smart Switcher on Mobile */}
+          <div className="grid flex-1 grid-cols-1 gap-4 sm:gap-6 lg:grid-cols-12 min-h-[480px] lg:min-h-[580px]">
+            {/* Left Column: Inbox List (hidden on mobile if an email is actively opened) */}
+            <div
+              className={`lg:col-span-5 xl:col-span-4 min-h-[480px] lg:min-h-0 lg:h-auto ${
+                selectedMessageId ? "hidden lg:block" : "block"
+              }`}
+            >
               <InboxList
                 messages={messages}
                 selectedMessageId={selectedMessageId}
@@ -961,12 +1049,24 @@ export default function HomePage() {
               />
             </div>
 
-            {/* Right Column: Message Reader */}
-            <div className="lg:col-span-7 xl:col-span-8 min-h-[580px] lg:h-auto">
+            {/* Right Column: Message Reader (hidden on mobile if no email is selected) */}
+            <div
+              className={`lg:col-span-7 xl:col-span-8 min-h-[480px] lg:min-h-0 lg:h-auto ${
+                !selectedMessageId ? "hidden lg:block" : "block"
+              }`}
+            >
               <MessageViewer
                 message={selectedMessage}
                 isLoading={isLoadingSelected}
-                onDeleteMessage={(id) => handleDeleteMessage(id)}
+                onDeleteMessage={(id) => {
+                  handleDeleteMessage(id);
+                  setSelectedMessageId(null);
+                  setSelectedMessage(null);
+                }}
+                onBackToList={() => {
+                  setSelectedMessageId(null);
+                  setSelectedMessage(null);
+                }}
               />
             </div>
           </div>

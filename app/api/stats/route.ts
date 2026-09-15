@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { getLiveTelemetryStats } from "@/lib/telemetry";
 
 export const dynamic = "force-dynamic";
 
@@ -25,15 +26,19 @@ export async function GET() {
     latency = 350;
   }
 
-  // Base day telemetry simulation based on current date
+  // Live real-time telemetry stats
+  const liveTelemetry = await getLiveTelemetryStats();
+
+  // Base day telemetry simulation based on current date + live activity
   const now = new Date();
   const daySeed = now.getUTCDate() * 100 + now.getUTCMonth();
   const hourOfDay = now.getUTCHours();
 
-  const dailyVisits = 4280 + (daySeed % 1200) + hourOfDay * 140;
+  const dailyVisits = 4280 + (daySeed % 1200) + hourOfDay * 140 + liveTelemetry.totalTrackedVisitors;
   const apiHits = 18450 + (daySeed % 3500) + hourOfDay * 680;
   const totalEmailsReceived = 9820 + (daySeed % 2100) + hourOfDay * 390;
-  const activeMailboxes = 840 + (daySeed % 180) + (hourOfDay % 8) * 45;
+  const activeMailboxes = Math.max(liveTelemetry.activeUsersNow, 1);
+
 
   // 24-hour activity distribution percentages across time zones
   // Simulating typical developer peak hours (UTC, EST, GMT, BST, JST)

@@ -47,3 +47,29 @@ model CachedMessage {
   @@index([mailboxId])
   @@index([mailTmId])
 }
+
+model VisitorSession {
+  id                  String   @id @default(cuid())
+  visitorId           String   @unique
+  ipAddress           String?
+  country             String?
+  countryCode         String?
+  city                String?
+  region              String?
+  browser             String?
+  os                  String?
+  device              String?  @default("desktop")
+  screenResolution    String?
+  language            String?
+  timezone            String?
+  userAgent           String?
+  totalVisits         Int      @default(1)
+  mailboxesCreated    Int      @default(0)
+  firstSeenAt         DateTime @default(now())
+  lastSeenAt          DateTime @default(now())
+
+  @@index([visitorId])
+  @@index([lastSeenAt])
+  @@index([countryCode])
+}
+

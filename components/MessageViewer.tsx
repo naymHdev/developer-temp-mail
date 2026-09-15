@@ -15,6 +15,7 @@ import {
   Terminal,
   Paperclip,
   Loader2,
+  ArrowLeft,
 } from "lucide-react";
 import DOMPurify from "dompurify";
 import { MailTmFullMessage } from "@/types/mailtm";
@@ -28,12 +29,14 @@ interface MessageViewerProps {
   message: MailTmFullMessage | null;
   isLoading: boolean;
   onDeleteMessage: (id: string) => void;
+  onBackToList?: () => void;
 }
 
 export function MessageViewer({
   message,
   isLoading,
   onDeleteMessage,
+  onBackToList,
 }: MessageViewerProps) {
   const [copiedOtp, setCopiedOtp] = useState(false);
   const [copiedJson, setCopiedJson] = useState(false);
@@ -101,10 +104,12 @@ export function MessageViewer({
 
   if (isLoading) {
     return (
-      <div className="flex h-full min-h-[480px] items-center justify-center rounded-3xl bg-[#141622]/95 backdrop-blur-2xl shadow-2xl shadow-black/50 p-8">
+      <div className="flex h-full min-h-[380px] lg:min-h-[480px] items-center justify-center rounded-2xl sm:rounded-3xl bg-[#141622]/95 backdrop-blur-2xl p-6 sm:p-8 border border-slate-800/40">
         <div className="flex flex-col items-center gap-3 text-slate-400">
-          <Loader2 className="h-8 w-8 animate-spin text-amber-400" />
-          <span className="text-xs font-mono">Fetching full email content...</span>
+          <Loader2 className="h-7 w-7 sm:h-8 sm:w-8 animate-spin text-amber-400" />
+          <span className="text-xs font-mono">
+            Fetching full email content...
+          </span>
         </div>
       </div>
     );
@@ -112,57 +117,74 @@ export function MessageViewer({
 
   if (!message) {
     return (
-      <div className="flex h-full min-h-[480px] flex-col items-center justify-center rounded-3xl bg-[#141622]/90 backdrop-blur-2xl shadow-2xl shadow-black/50 p-8 text-center">
-        <div className="flex h-16 w-16 items-center justify-center rounded-3xl bg-[#1b1e2e] text-amber-400/80 shadow-inner mb-3">
-          <Mail className="h-8 w-8" />
+      <div className="flex h-full min-h-[380px] lg:min-h-[480px] flex-col items-center justify-center rounded-2xl sm:rounded-3xl bg-[#141622]/90 backdrop-blur-2xl p-6 sm:p-8 text-center border border-slate-800/40">
+        <div className="flex h-14 w-14 sm:h-16 sm:w-16 items-center justify-center rounded-2xl sm:rounded-3xl bg-[#1b1e2e] text-amber-400/80 shadow-inner mb-3">
+          <Mail className="h-7 w-7 sm:h-8 sm:w-8" />
         </div>
-        <h3 className="text-base font-bold text-slate-100">No message selected</h3>
+        <h3 className="text-sm sm:text-base font-bold text-slate-100">
+          No message selected
+        </h3>
         <p className="mt-1 text-xs text-slate-400 max-w-sm leading-relaxed">
-          Select an email from the inbox on the left to read its contents, extract OTP codes, and inspect developer headers.
+          Select an email from the inbox list to read its contents, extract OTP
+          codes, and inspect developer headers.
         </p>
       </div>
     );
   }
 
   return (
-    <div className="flex h-full flex-col rounded-3xl bg-[#141622]/95 backdrop-blur-2xl shadow-2xl shadow-black/50 overflow-hidden">
+    <div className="flex h-full flex-col rounded-2xl sm:rounded-3xl bg-[#141622]/95 backdrop-blur-2xl overflow-hidden border border-slate-800/40">
       {/* Email Header */}
-      <div className="flex flex-col gap-3.5 p-6 pb-4">
-        <div className="flex items-start justify-between gap-4">
-          <div className="space-y-1.5">
-            <h2 className="text-xl font-bold text-slate-100 tracking-tight">
-              {message.subject || "(No Subject)"}
-            </h2>
-            <div className="flex flex-wrap items-center gap-2 text-xs text-slate-400">
-              <span className="font-semibold text-amber-300">
-                {message.from.name || message.from.address}
-              </span>
-              <span className="font-mono text-slate-400">
-                &lt;{message.from.address}&gt;
-              </span>
-              <span>•</span>
-              <span>{formatFullDate(message.createdAt)}</span>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <Button
-              variant="destructive"
-              size="sm"
-              onClick={() => onDeleteMessage(message.id)}
-              className="h-9 gap-1.5 text-xs rounded-xl bg-red-500/10 text-red-400 hover:bg-red-500/20 shadow-md shadow-black/20"
+      <div className="flex flex-col gap-3 p-4 sm:p-6 pb-3 sm:pb-4 border-b border-slate-800/50">
+        {/* Mobile Back Button & Delete Action */}
+        <div className="flex items-center justify-between gap-2">
+          {onBackToList ? (
+            <button
+              onClick={onBackToList}
+              className="lg:hidden flex items-center gap-1.5 rounded-xl bg-[#1b1e2e] px-2.5 py-1.5 text-xs font-medium text-amber-300 hover:bg-[#25283c] transition-all"
             >
-              <Trash2 className="h-3.5 w-3.5" />
-              <span>Delete</span>
-            </Button>
+              <ArrowLeft className="h-3.5 w-3.5" />
+              <span>Back to Inbox</span>
+            </button>
+          ) : (
+            <div />
+          )}
+
+          <Button
+            variant="destructive"
+            size="sm"
+            onClick={() => onDeleteMessage(message.id)}
+            className="h-8 sm:h-9 gap-1.5 text-xs rounded-xl bg-red-500/10 text-red-400 hover:bg-red-500/20 shadow-sm"
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+            <span>Delete</span>
+          </Button>
+        </div>
+
+        {/* Subject & Sender */}
+        <div className="space-y-1">
+          <h2 className="text-base sm:text-xl font-bold text-slate-100 tracking-tight leading-snug">
+            {message.subject || "(No Subject)"}
+          </h2>
+          <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 text-[11px] sm:text-xs text-slate-400">
+            <span className="font-semibold text-amber-300">
+              {message.from.name || message.from.address}
+            </span>
+            <span className="font-mono text-slate-400 text-[10px] sm:text-xs truncate max-w-[200px] sm:max-w-none">
+              &lt;{message.from.address}&gt;
+            </span>
+            <span>•</span>
+            <span className="text-[10px] sm:text-xs">
+              {formatFullDate(message.createdAt)}
+            </span>
           </div>
         </div>
 
         {/* Smart OTP and Magic Link Extraction Banner */}
         {(extracted.otpCode || extracted.magicLinks.length > 0) && (
-          <div className="flex flex-col gap-2.5 rounded-2xl bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent p-4 shadow-inner">
+          <div className="flex flex-col gap-2 rounded-xl sm:rounded-2xl bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent p-3 sm:p-4 shadow-inner border border-amber-500/20">
             <div className="flex items-center gap-2">
-              <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-amber-500/20 text-amber-400">
+              <div className="flex h-5 w-5 sm:h-6 sm:w-6 items-center justify-center rounded-lg bg-amber-500/20 text-amber-400">
                 <KeyRound className="h-3.5 w-3.5" />
               </div>
               <span className="text-xs font-bold text-amber-300">
@@ -171,10 +193,10 @@ export function MessageViewer({
             </div>
 
             {extracted.otpCode && (
-              <div className="flex items-center justify-between gap-3 rounded-xl bg-[#0b0c12]/90 px-4 py-2.5 shadow-inner">
-                <div className="flex items-center gap-3">
+              <div className="flex items-center justify-between gap-3 rounded-xl bg-[#0b0c12]/90 p-2.5 sm:px-4 sm:py-2.5 shadow-inner border border-slate-800">
+                <div className="flex items-center gap-2 sm:gap-3">
                   <span className="text-xs text-slate-400">Detected OTP:</span>
-                  <span className="font-mono text-xl font-black tracking-widest text-amber-400">
+                  <span className="font-mono text-lg sm:text-xl font-black tracking-widest text-amber-400 select-all">
                     {extracted.otpCode}
                   </span>
                 </div>
@@ -183,7 +205,7 @@ export function MessageViewer({
                   variant="glow"
                   size="sm"
                   onClick={handleCopyOtp}
-                  className="h-8 gap-1 px-3 text-xs rounded-xl bg-gradient-to-r from-amber-500 to-amber-400 text-slate-950 font-bold hover:brightness-110 shadow-lg shadow-amber-500/20"
+                  className="h-8 gap-1 px-2.5 sm:px-3 text-xs rounded-xl bg-gradient-to-r from-amber-500 to-amber-400 text-slate-950 font-bold hover:brightness-110 shadow-md shadow-amber-500/20 shrink-0"
                 >
                   {copiedOtp ? (
                     <>
@@ -209,9 +231,9 @@ export function MessageViewer({
                   {extracted.magicLinks.map((url, idx) => (
                     <div
                       key={idx}
-                      className="flex items-center justify-between gap-2 rounded-xl bg-[#0b0c12]/80 px-3 py-2 text-xs font-mono"
+                      className="flex items-center justify-between gap-2 rounded-xl bg-[#0b0c12]/80 px-2.5 py-1.5 sm:px-3 sm:py-2 text-xs font-mono border border-slate-800"
                     >
-                      <span className="truncate text-slate-300 max-w-[80%]">
+                      <span className="truncate text-slate-300 max-w-[70%] sm:max-w-[80%] text-[11px]">
                         {url}
                       </span>
                       <div className="flex items-center gap-1 shrink-0">
@@ -245,11 +267,11 @@ export function MessageViewer({
                 href={`https://api.mail.tm${att.downloadUrl}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 rounded-xl bg-[#1b1e2e] px-3 py-1.5 text-xs text-slate-200 hover:bg-[#25283c] transition-colors shadow-sm"
+                className="inline-flex items-center gap-1.5 rounded-xl bg-[#1b1e2e] px-2.5 py-1 text-xs text-slate-200 hover:bg-[#25283c] transition-colors shadow-sm"
               >
-                <Download className="h-3.5 w-3.5 text-amber-400" />
-                <span>{att.filename}</span>
-                <span className="text-[10px] text-slate-400 font-mono">
+                <Download className="h-3 w-3 text-amber-400" />
+                <span className="truncate max-w-[120px]">{att.filename}</span>
+                <span className="text-[10px] text-slate-500 font-mono">
                   ({Math.round(att.size / 1024)} KB)
                 </span>
               </a>
@@ -258,105 +280,119 @@ export function MessageViewer({
         )}
       </div>
 
-      {/* Tabs Content */}
-      <Tabs defaultValue="rendered" className="flex flex-1 flex-col overflow-hidden px-6 pb-6 pt-2">
-        <div className="flex items-center justify-between">
-          <TabsList className="bg-[#0b0c12]/90 rounded-2xl p-1">
-            <TabsTrigger value="rendered" className="gap-1.5 rounded-xl">
-              <Eye className="h-3.5 w-3.5" />
-              <span>Rendered View</span>
+      {/* Tabs View: Rendered HTML / Plain Text / Raw Headers / JSON */}
+      <Tabs
+        defaultValue="html"
+        className="flex flex-1 flex-col overflow-hidden"
+      >
+        <div className="flex items-center justify-between border-b border-slate-800/60 px-3 sm:px-6 py-2 bg-[#0e101a]">
+          <TabsList className="bg-[#171928] p-1 rounded-xl h-8 sm:h-9">
+            <TabsTrigger
+              value="html"
+              className="gap-1 sm:gap-1.5 text-xs data-[state=active]:bg-amber-500/20 data-[state=active]:text-amber-300 rounded-lg px-2 sm:px-3 py-1"
+            >
+              <Eye className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+              <span>HTML</span>
             </TabsTrigger>
-            <TabsTrigger value="text" className="gap-1.5 rounded-xl">
-              <FileText className="h-3.5 w-3.5" />
-              <span>Plain Text</span>
+            <TabsTrigger
+              value="text"
+              className="gap-1 sm:gap-1.5 text-xs data-[state=active]:bg-amber-500/20 data-[state=active]:text-amber-300 rounded-lg px-2 sm:px-3 py-1"
+            >
+              <FileText className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+              <span>Text</span>
             </TabsTrigger>
-            <TabsTrigger value="inspector" className="gap-1.5 rounded-xl">
-              <Code className="h-3.5 w-3.5" />
-              <span>Dev Inspector</span>
+            <TabsTrigger
+              value="json"
+              className="gap-1 sm:gap-1.5 text-xs data-[state=active]:bg-amber-500/20 data-[state=active]:text-amber-300 rounded-lg px-2 sm:px-3 py-1 font-mono"
+            >
+              <Code className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+              <span>JSON</span>
+            </TabsTrigger>
+            <TabsTrigger
+              value="curl"
+              className="gap-1 sm:gap-1.5 text-xs data-[state=active]:bg-amber-500/20 data-[state=active]:text-amber-300 rounded-lg px-2 sm:px-3 py-1 font-mono"
+            >
+              <Terminal className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+              <span>cURL</span>
             </TabsTrigger>
           </TabsList>
         </div>
 
-        {/* Rendered HTML Tab */}
-        <TabsContent value="rendered" className="flex-1 overflow-y-auto mt-3">
+        {/* Tab 1: Sanitized Rendered HTML */}
+        <TabsContent
+          value="html"
+          className="flex-1 overflow-y-auto p-4 sm:p-6 bg-[#0f111c]/60 m-0"
+        >
           {sanitizedHtml ? (
-            <div className="rounded-2xl bg-white text-slate-900 p-6 shadow-xl overflow-x-auto min-h-[300px]">
-              <div
-                dangerouslySetInnerHTML={{ __html: sanitizedHtml }}
-                className="prose max-w-none prose-p:my-2 prose-headings:my-3"
-              />
-            </div>
+            <div
+              className="prose prose-invert max-w-none text-slate-200 text-xs sm:text-sm leading-relaxed overflow-x-auto"
+              dangerouslySetInnerHTML={{ __html: sanitizedHtml }}
+            />
+          ) : message.text ? (
+            <pre className="whitespace-pre-wrap font-sans text-xs sm:text-sm text-slate-200 leading-relaxed">
+              {message.text}
+            </pre>
           ) : (
-            <div className="rounded-2xl bg-[#0b0c12]/80 p-6 text-slate-300 font-sans text-sm whitespace-pre-wrap leading-relaxed shadow-inner">
-              {message.text || "(No HTML or text body found)"}
+            <div className="flex h-32 items-center justify-center text-xs text-slate-500">
+              No HTML body in this email.
             </div>
           )}
         </TabsContent>
 
-        {/* Plain Text Tab */}
-        <TabsContent value="text" className="flex-1 overflow-y-auto mt-3">
-          <div className="rounded-2xl bg-[#0b0c12]/90 p-5 font-mono text-xs text-slate-300 whitespace-pre-wrap leading-relaxed select-text shadow-inner">
-            {message.text || "(No plain text content)"}
-          </div>
+        {/* Tab 2: Plain Text */}
+        <TabsContent
+          value="text"
+          className="flex-1 overflow-y-auto p-4 sm:p-6 bg-[#0a0b10] font-mono text-xs text-slate-300 m-0 leading-relaxed select-all"
+        >
+          {message.text || "No plain text content."}
         </TabsContent>
 
-        {/* Dev Inspector Tab */}
-        <TabsContent value="inspector" className="flex-1 overflow-y-auto mt-3 space-y-4">
-          {/* cURL automation snippet */}
-          <div className="flex flex-col gap-2 rounded-2xl bg-[#0b0c12]/90 p-4 shadow-inner">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Terminal className="h-4 w-4 text-amber-400" />
-                <span className="text-xs font-bold text-slate-200">
-                  Automate in Tests (cURL / Script)
-                </span>
-              </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleCopyCurl}
-                className="h-7 gap-1 text-xs text-slate-300 rounded-lg hover:bg-[#1b1e2e]"
-              >
-                {copiedCurl ? (
-                  <Check className="h-3 w-3 text-emerald-400" />
-                ) : (
-                  <Copy className="h-3 w-3" />
-                )}
-                <span>Copy Command</span>
-              </Button>
-            </div>
-            <pre className="overflow-x-auto rounded-xl bg-[#141622] p-3.5 font-mono text-[11px] text-amber-300">
-              {curlSnippet}
-            </pre>
+        {/* Tab 3: Message JSON */}
+        <TabsContent
+          value="json"
+          className="flex-1 overflow-y-auto p-4 sm:p-6 bg-[#0a0b10] font-mono text-xs text-slate-300 m-0 relative"
+        >
+          <div className="absolute right-4 top-4">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleCopyJson}
+              className="h-7 gap-1 px-2.5 text-[11px] rounded-lg bg-[#1a1d2e] text-slate-300"
+            >
+              {copiedJson ? (
+                <Check className="h-3 w-3" />
+              ) : (
+                <Copy className="h-3 w-3" />
+              )}
+              <span>{copiedJson ? "Copied" : "Copy"}</span>
+            </Button>
           </div>
+          <pre className="leading-relaxed select-all">
+            {JSON.stringify(message, null, 2)}
+          </pre>
+        </TabsContent>
 
-          {/* Raw JSON Payload */}
-          <div className="flex flex-col gap-2 rounded-2xl bg-[#0b0c12]/90 p-4 shadow-inner">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Code className="h-4 w-4 text-purple-400" />
-                <span className="text-xs font-bold text-slate-200">
-                  Raw Message JSON
-                </span>
-              </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleCopyJson}
-                className="h-7 gap-1 text-xs text-slate-300 rounded-lg hover:bg-[#1b1e2e]"
-              >
-                {copiedJson ? (
-                  <Check className="h-3 w-3 text-emerald-400" />
-                ) : (
-                  <Copy className="h-3 w-3" />
-                )}
-                <span>Copy JSON</span>
-              </Button>
-            </div>
-            <pre className="max-h-[300px] overflow-y-auto rounded-xl bg-[#141622] p-3.5 font-mono text-[11px] text-slate-300 select-all">
-              {JSON.stringify(message, null, 2)}
-            </pre>
+        {/* Tab 4: cURL replay command */}
+        <TabsContent
+          value="curl"
+          className="flex-1 overflow-y-auto p-4 sm:p-6 bg-[#0a0b10] font-mono text-xs text-amber-300 m-0 relative"
+        >
+          <div className="absolute right-4 top-4">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleCopyCurl}
+              className="h-7 gap-1 px-2.5 text-[11px] rounded-lg bg-[#1a1d2e] text-slate-300"
+            >
+              {copiedCurl ? (
+                <Check className="h-3 w-3" />
+              ) : (
+                <Copy className="h-3 w-3" />
+              )}
+              <span>{copiedCurl ? "Copied" : "Copy cURL"}</span>
+            </Button>
           </div>
+          <pre className="leading-relaxed select-all">{curlSnippet}</pre>
         </TabsContent>
       </Tabs>
     </div>

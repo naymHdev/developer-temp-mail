@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/sonner";
+import { TelemetryTracker } from "@/components/TelemetryTracker";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -38,9 +39,11 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} dark h-full antialiased`}
     >
       <body className="min-h-full flex flex-col bg-[#0d0e14] text-slate-100 font-sans selection:bg-amber-500/25 selection:text-amber-200">
+        <TelemetryTracker />
         {children}
         <Toaster position="bottom-right" richColors />
       </body>
     </html>
   );
 }
+

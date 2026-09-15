@@ -44,7 +44,7 @@ export function InboxList({
   });
 
   return (
-    <div className="flex h-full flex-col rounded-3xl bg-[#141622]/95 backdrop-blur-2xl shadow-2xl shadow-black/50 overflow-hidden">
+    <div className="flex h-full flex-col rounded-3xl bg-[#141622]/95 backdrop-blur-2xl overflow-hidden border border-slate-800/40">
       {/* Header & Search */}
       <div className="flex flex-col gap-3 p-5">
         <div className="flex items-center justify-between">
@@ -96,7 +96,9 @@ export function InboxList({
             {searchQuery ? (
               <div className="flex flex-col items-center gap-2">
                 <Search className="h-8 w-8 text-slate-600" />
-                <p className="text-xs text-slate-400">No emails match &quot;{searchQuery}&quot;</p>
+                <p className="text-xs text-slate-400">
+                  No emails match &quot;{searchQuery}&quot;
+                </p>
               </div>
             ) : (
               <div className="flex flex-col items-center gap-4">
@@ -114,7 +116,8 @@ export function InboxList({
                     Waiting for inbound emails...
                   </h3>
                   <p className="text-xs text-slate-400 max-w-[220px] leading-relaxed">
-                    Send a test email to your temporary address above to see it appear here instantly.
+                    Send a test email to your temporary address above to see it
+                    appear here instantly.
                   </p>
                 </div>
               </div>
